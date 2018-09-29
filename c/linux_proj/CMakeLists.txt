@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 2.6)
+project(gomoku)
+include_directories(../src)
+file(GLOB_RECURSE SRC ../src/*.cpp)
+file(GLOB_RECURSE SRC1 ../src/*.CPP)
+add_executable(gomoku ${SRC} ${SRC1})
