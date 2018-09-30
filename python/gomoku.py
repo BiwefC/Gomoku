@@ -1,5 +1,6 @@
 from enum import Enum
 import numpy as np
+import ctypes
 
 class BoardState(Enum):
   Empty = 0
@@ -26,9 +27,9 @@ class Gomoku(object):
 
   def get_next_player(self):
     if self.__next_player_black:
-      return BoardState.Black
+      return BoardState.Black.value
     else:
-      return BoardState.White
+      return BoardState.White.value
 
   def change_next_player(self):
     self.__next_player_black = not self.__next_player_black
@@ -41,7 +42,7 @@ class Gomoku(object):
 
   def do_chess_basic(self, num, player):
     x, y = self.num_to_coor(num)
-    self.__board[y][x] = player.value
+    self.__board[y][x] = player
     self.__available.remove(num)
 
   def do_chess(self, num):
@@ -49,12 +50,20 @@ class Gomoku(object):
     self.do_chess_basic(num, player)
     self.change_next_player()
 
-  def judge_winner(self):
-    print('the judge is missing!')
+  def judge_init(self):
+    so = ctypes.cdll.LoadLibrary
+    lib = so("../c/linux_proj/libgomoku_judge.so")
+    lib.JudgeAPIInit()
+    # call c api
 
-  def judge_end(self):
-    if len(self.__available) == 0:
-      return True
+  def do_judge(self, num):
+    so = ctypes.cdll.LoadLibrary
+    lib = so("../c/linux_proj/libgomoku_judge.so")
+    x, y = self.num_to_coor(num)
+    player = self.get_next_player()
+    return lib.JudgeAPIUpdateAndJudge(x, y, player)
+    # call c api
+    # print('the judge is missing!')
 
 class PlayGomoku(object):
   def __init__(self, gomoku):
@@ -93,14 +102,21 @@ class PlayGomoku(object):
     return self.gomoku.coor_to_num(x, y)
 
   def start_play(self, input_func = None, output_func = None):
+    self.gomoku.judge_init()
+    output_func()
     while True:
-      output_func()
       next_player = self.gomoku.get_next_player()
+      if next_player == 1:
+        next_player = 'Black'
+      else:
+        next_player = 'White'
       print("Turn to %s" %next_player)
       num = input_func()
       self.gomoku.do_chess(num)
-
-      # if self.gomoku.judge_end
+      output_func()
+      result = self.gomoku.do_judge(num)
+      if result != 0:
+        break
 
 if __name__ == '__main__':
   # aaa = Gomoku(width = 8, height = 8)
