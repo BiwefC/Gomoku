@@ -30,7 +30,7 @@ int Ai::xiazi( Table T )
 			}
 		}
 		cout<<"score：\t\t\t\t\t电脑落子： "<<besti<<"\t"<<bestj<<endl ;
-		cout<<maxscore ;
+		// cout<<maxscore ; //ATTENTION IS CHANGED IN OUT PROGRAM
 	    return 100*besti + bestj ;
 	}
 }

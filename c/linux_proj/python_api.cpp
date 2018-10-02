@@ -3,26 +3,23 @@
 #include "AI.H"
 #include "python_api.h"
 
-class JudgeAPI
+class TableAPI
 {
-  private:
-    Judge judgewhite;
-    Judge judgeblack;
+  public:
+    TableAPI(int input[15][15]);
+    void TableReset(void);
+    void Set(int x, int y, int color);
+    
     Table fivetable;
     int count;
-
-  public:
-    JudgeAPI(int input[15][15]);
-    void Init(void);
-    int UpdateAndJudge(int x, int y,int color);
 };
 
-JudgeAPI::JudgeAPI(int input[15][15]): judgewhite(1), judgeblack(2), fivetable(input)
+TableAPI::TableAPI(int input[15][15]):fivetable(input), count(0)
 {
 
 }
 
-void JudgeAPI::Init(void)
+void TableAPI::TableReset(void)
 {
   for(int i = 0; i < 15; i++){
     for(int j = 0; j < 15; j++){
@@ -32,35 +29,56 @@ void JudgeAPI::Init(void)
   count = 0;
 }
 
-int JudgeAPI::UpdateAndJudge(int x, int y, int color)
+inline void TableAPI::Set(int x, int y, int color)
 {
   fivetable.set(x, y, color);
   count++;
-  if(count % 2){
-    if(judgeblack.longlink(fivetable) ){
+}
+
+class JudgeAPI
+{
+  private:
+    Judge judgewhite;
+    Judge judgeblack;
+    TableAPI &gomoku_table;
+
+  public:
+    JudgeAPI(TableAPI &input_table);
+    int DoJudge(int x, int y,int color);
+};
+
+JudgeAPI::JudgeAPI(TableAPI &input_table): judgewhite(1), judgeblack(2), gomoku_table(input_table)
+{
+
+}
+
+int JudgeAPI::DoJudge(int x, int y, int color)
+{
+  if(gomoku_table.count % 2){
+    if(judgeblack.longlink(gomoku_table.fivetable) ){
       cout << "黑棋长连禁手，白棋胜" << endl;
       return 2;
     }
-    if(judgeblack.fivelink(fivetable)){
+    if(judgeblack.fivelink(gomoku_table.fivetable)){
       cout<<"黑棋五连，黑棋胜"<<endl;
       return 1;
     }
-    if(judgeblack.huosan(fivetable, x, y) > 1 ){
+    if(judgeblack.huosan(gomoku_table.fivetable, x, y) > 1 ){
       cout<<"黑棋三三禁手，白棋胜"<<endl;
       return 2;
     }
-    if(judgeblack.si(fivetable, x, y) > 1){
+    if(judgeblack.si(gomoku_table.fivetable, x, y) > 1){
       cout<<"黑棋四四禁手，白棋胜"<<endl;
       return 2;
     }
   }
   else{
-    if(judgewhite.fivelink(fivetable) ){
+    if(judgewhite.fivelink(gomoku_table.fivetable) ){
       cout<<"白棋五连，白棋胜"<<endl;
       return 1;
     }
   }
-  if(count == 225){
+  if(gomoku_table.count == 225){
     cout <<"和棋"<<endl;
     return 3;
   }
@@ -68,19 +86,59 @@ int JudgeAPI::UpdateAndJudge(int x, int y, int color)
 }
 
 
+class AIAPI
+{
+  private:
+    Ai aiwhite;
+    Ai aiblack;
+    TableAPI &gomoku_table;
+
+  public:
+    AIAPI(TableAPI &input_table);
+    int GetBestSet(void);
+};
+
+AIAPI::AIAPI(TableAPI &input_table):aiwhite(1), aiblack(2), gomoku_table(input_table)
+{
+
+}
+
+int AIAPI::GetBestSet(void)
+{
+  if(gomoku_table.count % 2){
+    return aiblack.xiazi(gomoku_table.fivetable);
+  }
+  else{
+    return aiwhite.xiazi(gomoku_table.fivetable);
+  }
+}
+
 extern "C" {
 
 int input[15][15] = {0};
 
-JudgeAPI judge_api(input);
+TableAPI table_api(input);
+JudgeAPI judge_api(table_api);
+AIAPI ai_api(table_api);
 
-int JudgeAPIInit(void)
+void TableAPITableReset(void)
 {
-  judge_api.Init();
+  table_api.TableReset();
 }
 
-int JudgeAPIUpdateAndJudge(int x,int y, int color)
+void TableAPISet(int x, int y, int color)
 {
-  judge_api.UpdateAndJudge(x, y, color);
+  table_api.Set(x, y, color);
 }
+
+int JudgeAPIDoJudge(int x,int y, int color)
+{
+  judge_api.DoJudge(x, y, color);
+}
+
+int AIAPIGetBestSet(void)
+{
+  return ai_api.GetBestSet();
+}
+
 }
