@@ -13,28 +13,33 @@ class GomokuBase(object):
   def __init__(self, **kwargs):
     self.width = int(kwargs.get('width', 15))
     self.height = int(kwargs.get('height', 15))
-    # self.n_to_win = int(kwargs.get('n_to_win', 5))
-    self.n_to_win = 5
+    self.n_to_win = int(kwargs.get('n_to_win', 5))
 
   def init_board(self):
-    self.__board = np.zeros((self.height, self.width))
+    self.__board = []
     self.__available = list(range(self.width * self.height))
     self.__next_player_black = True
 
-  def get_board(self):
-    return self.__board
+  def get_board_readable(self):
+    board = np.zeros((self.height, self.width))
+    for index, one_set in enumerate(self.__board):
+      x, y = self.num_to_coor(one_set)
+      if index % 2 == 0:
+        player = BoardState.Black.value
+      else:
+        player = BoardState.White.value
+      board[y][x] = player
+
+    return board
 
   def get_available(self):
     return self.__available
 
   def get_next_player(self):
-    if self.__next_player_black:
+    if len(self.__board) % 2 == 0:
       return BoardState.Black.value
     else:
       return BoardState.White.value
-
-  def change_next_player(self):
-    self.__next_player_black = not self.__next_player_black
 
   def num_to_coor(self, num):
     return num % self.width, num // self.width
@@ -42,15 +47,9 @@ class GomokuBase(object):
   def coor_to_num(self, x, y):
     return y * self.width + x
 
-  def do_chess_basic(self, num, player):
-    x, y = self.num_to_coor(num)
-    self.__board[y][x] = player
-    self.__available.remove(num)
-
   def do_chess(self, num):
-    player = self.get_next_player()
-    self.do_chess_basic(num, player)
-    self.change_next_player()
+    self.__board.append(num)
+    self.__available.remove(num)
 
 
 class GomokuAPI(object):
@@ -88,7 +87,7 @@ class GomokuPlayer(Enum):
   AI = 3
 
 
-class PlayGomoku(object):
+class GomokuServer(object):
   def __init__(self, gomoku_base):
     self.__gomoku_base = gomoku_base
     self.__gomoku_api = GomokuAPI(gomoku_base)
@@ -96,7 +95,7 @@ class PlayGomoku(object):
   def graphic(self):
     width = self.__gomoku_base.width
     height = self.__gomoku_base.height
-    board = self.__gomoku_base.get_board()
+    board = self.__gomoku_base.get_board_readable()
 
     """Draw the board and show game info"""
 
@@ -119,7 +118,7 @@ class PlayGomoku(object):
       print('\n')
 
   def input_by_key(self):
-    str_in = input()
+    str_in = input('with format: x,y\n')
     x, y = str_in.split(',')
     x = int(x)
     y = int(y)
@@ -151,7 +150,7 @@ class PlayGomoku(object):
     if player == GomokuPlayer.Human:
       print("Turn to Human using %s..."%next_player)
       if input_func is None:
-        return self.input_by_key
+        return self.input_by_key()
       else:
         return input_func
     elif player == GomokuPlayer.SimpleAI:
@@ -165,8 +164,8 @@ if __name__ == '__main__':
   # aaa = Gomoku(width = 8, height = 8)
   aaa = GomokuBase()
   aaa.init_board()
-  bbb = PlayGomoku(aaa)
-  bbb.start_play(GomokuPlayer.SimpleAI, GomokuPlayer.SimpleAI, bbb.graphic)
+  bbb = GomokuServer(aaa)
+  bbb.start_play(GomokuPlayer.Human, GomokuPlayer.SimpleAI, bbb.graphic)
 # class GomokuJudge(Object):
 
 
