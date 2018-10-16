@@ -45,6 +45,34 @@ class GomokuBase(object):
 
     return board
 
+  def get_status(self):
+    status = np.zeros((4, self.width, self.height))
+
+    if len(self.__board) == 0:
+      return status
+    else:
+      if self.get_next_player() == BoardState.Black.value:
+        cur_chess = self.__board[::2]
+        opt_chess = self.__board[1::2]
+        status[3][:][:] = 1.0
+      else:
+        cur_chess = self.__board[1::2]
+        opt_chess = self.__board[::2]
+
+      for one_chess in cur_chess:
+        x, y = self.num_to_coor(one_chess)
+        status[0][y][x] = 1.0
+
+      for one_chess in opt_chess:
+        x, y = self.num_to_coor(one_chess)
+        status[1][y][x] = 1.0
+
+      x, y = self.num_to_coor(self.__board[-1])
+      status[2][y][x] = 1.0
+
+    return status
+
+
   def get_available(self):
     return self.__available
 
@@ -65,6 +93,8 @@ class GomokuBase(object):
     self.__available.remove(num)
 
   def do_judge(self):
+    if len(self.__board) < self.n_to_win:
+      return 0
     num_last = self.__board[-1]
     x_last, y_last = self.num_to_coor(num_last)
     next_player = self.get_next_player()
@@ -80,7 +110,7 @@ class GomokuBase(object):
       l_point = x_last
       r_point = self.width - x_last - 1
       u_point = y_last
-      d_point = self.width - x_last - 1
+      d_point = self.width - y_last - 1
 
       l_count = 0
       r_count = 0
@@ -157,19 +187,38 @@ class GomokuBase(object):
 
       # -
       count = 1 + max((l_count + r_count), (u_count + d_count), (lu_count + rd_count), (ld_count + ru_count))
-      print(count)
+      # print(l_count)
+      # print(r_count)
+      # print(u_count)
+      # print(d_count)
+      # print(lu_count)
+      # print(ld_count)
+      # print(ru_count)
+      # print(rd_count)
+      # print(count)
       if count >= self.n_to_win:
         if next_player == BoardState.Black.value:
-          print("White player is winner!")
+          # print("White player is winner!")
           return 2
         else:
-          print("Black player is winner!")
+          # print("Black player is winner!")
           return 1
       elif len(self.__available) == 0:
-        print("No winner!")
+        # print("No winner!")
         return 3
       else:
         return 0
+
+  def game_end(self):
+    result = self.do_judge()
+    if result == 0:
+      return False, -1
+    if result == 1:
+      return True, 1
+    if result == 2:
+      return True, 2
+    if result == 3:
+      return True, -1
 
 
 class GomokuAPI(object):
@@ -206,9 +255,12 @@ class GomokuPlayer(Enum):
 
 
 class GomokuServer(object):
-  def __init__(self):
-    self.__gomoku_api = GomokuAPI()
-    self.__gomoku_base = GomokuBase(width = 8, height = 8, api = self.__gomoku_api)
+  def __init__(self, gomoku_base = None):
+    if gomoku_base is None:
+      self.__gomoku_api = GomokuAPI()
+      self.__gomoku_base = GomokuBase(width = 6, height = 6, n_to_win = 4, api = self.__gomoku_api)
+    else:
+      self.__gomoku_base = gomoku_base
 
   def graphic(self):
     width = self.__gomoku_base.width
@@ -279,6 +331,41 @@ class GomokuServer(object):
     elif player == GomokuPlayer.AI:
       print("This AI is under building...")
       return 0
+
+  def start_self_play(self, player, is_shown=1, temp=1e-3):
+    """ start a self-play game using a MCTS player, reuse the search tree,
+    and store the self-play data: (state, mcts_probs, z) for training
+    """
+    self.__gomoku_base.init_board()
+    states, mcts_probs, current_players = [], [], []
+    while True:
+      move, move_probs = player.get_action(self.__gomoku_base,
+                                           temp=temp,
+                                           return_prob=1)
+      # store the data
+      states.append(self.__gomoku_base.get_status())
+      mcts_probs.append(move_probs)
+      current_players.append(self.__gomoku_base.get_next_player())
+      # perform a move
+      self.__gomoku_base.do_chess(move)
+      if is_shown:
+        self.graphic()
+      result = self.__gomoku_base.do_judge()
+      end, winner = self.__gomoku_base.game_end()
+      if end:
+        # winner from the perspective of the current player of each state
+        winners_z = np.zeros(len(current_players))
+        if winner != -1:
+          winners_z[np.array(current_players) == winner] = 1.0
+          winners_z[np.array(current_players) != winner] = -1.0
+        # reset MCTS root node
+        player.reset_player()
+        if is_shown:
+          if winner != -1:
+            print("Game end. Winner is player:", winner)
+          else:
+            print("Game end. Tie")
+        return winner, zip(states, mcts_probs, winners_z)
 
 if __name__ == '__main__':
   bbb = GomokuServer()
