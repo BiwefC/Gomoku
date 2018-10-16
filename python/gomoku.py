@@ -22,6 +22,8 @@ class GomokuBase(object):
     if self.use_forbidden:
       self.use_api = True
       self.__api = kwargs.get('api', None)
+    else:
+      self.use_api = False
 
   def init_board(self):
     self.__board = []
@@ -63,10 +65,137 @@ class GomokuBase(object):
     self.__available.remove(num)
 
   def do_judge(self):
+    num_last = self.__board[-1]
+    x_last, y_last = self.num_to_coor(num_last)
+    next_player = self.get_next_player()
     if self.use_api:
-      x_last, y_last = self.num_to_coor(self.__board[-1])
-      color_last = self.get_next_player()
-      return self.__api.api_set_and_judge(x_last, y_last, color_last)
+      # COLOR IS OPT TO PLAYER
+      return self.__api.api_set_and_judge(x_last, y_last, next_player)
+    else:
+      if next_player == BoardState.Black.value:
+        chess_point = self.__board[1::2]
+      else:
+        chess_point = self.__board[::2]
+
+      l_point = x_last
+      print("l_point = " + str(l_point))
+      r_point = self.width - x_last - 1
+      print("r_point = " + str(r_point))
+      u_point = y_last
+      print("u_point = " + str(u_point))
+      d_point = self.width - x_last - 1
+      print("d_point = " + str(d_point))
+
+      # -
+      l_count = 0
+      r_count = 0
+      u_count = 0
+      d_count = 0
+      lu_count = 0
+      ru_count = 0
+      ld_count = 0
+      rd_count = 0
+
+      print('=' * 10)
+      print("now_point = (%d, %d)"%(x_last, y_last))
+      for i in range(1, min(l_point, self.n_to_win - 1) + 1):
+        num_find = num_last - i
+        x_find, y_find = self.num_to_coor(num_find)
+        if num_find in chess_point:
+          l_count += 1
+        else:
+          break
+        print("find_point = (%d, %d)"%(x_find, y_find))
+
+      print('=' * 10)
+      print("now_point = (%d, %d)"%(x_last, y_last))
+      for i in range(1, min(r_point, self.n_to_win - 1) + 1):
+        num_find = num_last + i
+        x_find, y_find = self.num_to_coor(num_find)
+        if num_find in chess_point:
+          r_count += 1
+        else:
+          break
+        print("find_point = (%d, %d)"%(x_find, y_find))
+
+      print('=' * 10)
+      print("now_point = (%d, %d)"%(x_last, y_last))
+      for i in range(1, min(u_point, self.n_to_win - 1) + 1):
+        num_find = num_last - i * self.width
+        x_find, y_find = self.num_to_coor(num_find)
+        if num_find in chess_point:
+          u_count += 1
+        else:
+          break
+        print("find_point = (%d, %d)"%(x_find, y_find))
+
+      print('=' * 10)
+      print("now_point = (%d, %d)"%(x_last, y_last))
+      for i in range(1, min(d_point, self.n_to_win - 1) + 1):
+        num_find = num_last + i * self.width
+        x_find, y_find = self.num_to_coor(num_find)
+        if num_find in chess_point:
+          d_count += 1
+        else:
+          break
+        print("find_point = (%d, %d)"%(x_find, y_find))
+
+      print('=' * 10)
+      print("now_point = (%d, %d)"%(x_last, y_last))
+      for i in range(1, min(u_point, l_point, self.n_to_win - 1) + 1):
+        num_find = num_last - i - i * self.width
+        x_find, y_find = self.num_to_coor(num_find)
+        if num_find in chess_point:
+          lu_count += 1
+        else:
+          break
+        print("find_point = (%d, %d)"%(x_find, y_find))
+
+      print('=' * 10)
+      print("now_point = (%d, %d)"%(x_last, y_last))
+      for i in range(1, min(u_point, r_point, self.n_to_win - 1) + 1):
+        num_find = num_last + i - i * self.width
+        x_find, y_find = self.num_to_coor(num_find)
+        if num_find in chess_point:
+          ru_count += 1
+        else:
+          break
+        print("find_point = (%d, %d)"%(x_find, y_find))
+
+      print('=' * 10)
+      print("now_point = (%d, %d)"%(x_last, y_last))
+      for i in range(1, min(d_point, l_point, self.n_to_win - 1) + 1):
+        num_find = num_last - i + i * self.width
+        x_find, y_find = self.num_to_coor(num_find)
+        if num_find in chess_point:
+          ld_count += 1
+        else:
+          break
+        print("find_point = (%d, %d)"%(x_find, y_find))
+
+      print('=' * 10)
+      print("now_point = (%d, %d)"%(x_last, y_last))
+      for i in range(1, min(d_point, r_point, self.n_to_win - 1) + 1):
+        num_find = num_last + i + i * self.width
+        x_find, y_find = self.num_to_coor(num_find)
+        if num_find in chess_point:
+          rd_count += 1
+        else:
+          break
+        print("find_point = (%d, %d)"%(x_find, y_find))
+
+      # -
+      count = 1 + max((l_count + r_count), (u_count + d_count), (lu_count + rd_count), (ld_count + ru_count))
+      print(count)
+      if count >= self.n_to_win:
+        if next_player == BoardState.Black.value:
+          return 2
+        else:
+          return 1
+      elif len(self.__available) == 0:
+        return 3
+      else:
+        return 0
 
 
 class GomokuAPI(object):
@@ -105,7 +234,7 @@ class GomokuPlayer(Enum):
 class GomokuServer(object):
   def __init__(self):
     self.__gomoku_api = GomokuAPI()
-    self.__gomoku_base = GomokuBase(api = self.__gomoku_api)
+    self.__gomoku_base = GomokuBase(width = 8, height = 8, api = self.__gomoku_api)
 
   def graphic(self):
     width = self.__gomoku_base.width
@@ -115,6 +244,7 @@ class GomokuServer(object):
     """Draw the board and show game info"""
 
     print("Player Black", "with X".rjust(3))
+
     print("Player White", "with O".rjust(3))
     print(" ", end = ' ')
     for x in range(width):
@@ -178,4 +308,4 @@ class GomokuServer(object):
 
 if __name__ == '__main__':
   bbb = GomokuServer()
-  bbb.start_play(GomokuPlayer.SimpleAI, GomokuPlayer.Human, bbb.graphic)
+  bbb.start_play(GomokuPlayer.Human, GomokuPlayer.Human, bbb.graphic)

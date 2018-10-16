@@ -75,7 +75,7 @@ int JudgeAPI::DoJudge(int x, int y, int color)
   else{
     if(judgewhite.fivelink(gomoku_table.fivetable) ){
       cout<<"白棋五连，白棋胜"<<endl;
-      return 1;
+      return 2;
     }
   }
   if(gomoku_table.count == 225){
