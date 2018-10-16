@@ -31,7 +31,7 @@ void TableAPI::TableReset(void)
 
 inline void TableAPI::Set(int x, int y, int color)
 {
-  fivetable.set(x, y, color);
+  fivetable.set(y, x, color);
   count++;
 }
 
@@ -63,11 +63,11 @@ int JudgeAPI::DoJudge(int x, int y, int color)
       cout<<"黑棋五连，黑棋胜"<<endl;
       return 1;
     }
-    if(judgeblack.huosan(gomoku_table.fivetable, x, y) > 1 ){
+    if(judgeblack.huosan(gomoku_table.fivetable, y, x) > 1 ){
       cout<<"黑棋三三禁手，白棋胜"<<endl;
       return 2;
     }
-    if(judgeblack.si(gomoku_table.fivetable, x, y) > 1){
+    if(judgeblack.si(gomoku_table.fivetable, y, x) > 1){
       cout<<"黑棋四四禁手，白棋胜"<<endl;
       return 2;
     }

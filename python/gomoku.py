@@ -14,11 +14,22 @@ class GomokuBase(object):
     self.width = int(kwargs.get('width', 15))
     self.height = int(kwargs.get('height', 15))
     self.n_to_win = int(kwargs.get('n_to_win', 5))
+    if self.width == 15 and self.height == 15 and self.n_to_win == 5:
+      self.use_forbidden = bool(kwargs.get('n_to_win', True))
+    else:
+      self.use_forbidden = False
+
+    if self.use_forbidden:
+      self.use_api = True
+      self.__api = kwargs.get('api', None)
 
   def init_board(self):
     self.__board = []
     self.__available = list(range(self.width * self.height))
     self.__next_player_black = True
+    if self.use_api:
+      self.__api.table_api_table_reset()
+
 
   def get_board_readable(self):
     board = np.zeros((self.height, self.width))
@@ -51,21 +62,24 @@ class GomokuBase(object):
     self.__board.append(num)
     self.__available.remove(num)
 
+  def do_judge(self):
+    if self.use_api:
+      x_last, y_last = self.num_to_coor(self.__board[-1])
+      color_last = self.get_next_player()
+      return self.__api.api_set_and_judge(x_last, y_last, color_last)
+
 
 class GomokuAPI(object):
-  def __init__(self, gomoku_base):
+  def __init__(self):
     self.__so = ctypes.cdll.LoadLibrary
     self.__lib = self.__so("../c/linux_proj/libgomoku_judge.so")
-    self.__gomoku_base = gomoku_base
 
   def table_api_table_reset(self):
     self.__lib.TableAPITableReset()
 
-  def api_set_and_judge(self, num):
-    x, y = self.__gomoku_base.num_to_coor(num)
-    player = self.__gomoku_base.get_next_player()
-    self.table_api_set(y, x, player)
-    return self.judge_api_do_judge(y, x, player)
+  def api_set_and_judge(self, x, y, color):
+    self.table_api_set(x, y, color)
+    return self.judge_api_do_judge(x, y, color)
     # ATTENTION: THE PLAYER AND COLOR IS NOT EQUAL!
 
   def table_api_set(self, x, y, color):
@@ -78,7 +92,8 @@ class GomokuAPI(object):
     tmp = self.__lib.AIAPIGetBestSet()
     x = tmp % 100
     y = tmp // 100
-    return self.__gomoku_base.coor_to_num(x, y)
+    return x, y
+
 
 class GomokuPlayer(Enum):
   NotDefine = 0
@@ -88,9 +103,9 @@ class GomokuPlayer(Enum):
 
 
 class GomokuServer(object):
-  def __init__(self, gomoku_base):
-    self.__gomoku_base = gomoku_base
-    self.__gomoku_api = GomokuAPI(gomoku_base)
+  def __init__(self):
+    self.__gomoku_api = GomokuAPI()
+    self.__gomoku_base = GomokuBase(api = self.__gomoku_api)
 
   def graphic(self):
     width = self.__gomoku_base.width
@@ -126,7 +141,7 @@ class GomokuServer(object):
     return self.__gomoku_base.coor_to_num(x, y)
 
   def start_play(self, player1 = GomokuPlayer.Human, player2 = GomokuPlayer.Human, output_func = None):
-    self.__gomoku_api.table_api_table_reset()
+    self.__gomoku_base.init_board()
     output_func()
     while True:
       next_player = self.__gomoku_base.get_next_player()
@@ -139,7 +154,7 @@ class GomokuServer(object):
 
       self.__gomoku_base.do_chess(num)
       output_func()
-      result = self.__gomoku_api.api_set_and_judge(num)
+      result = self.__gomoku_base.do_judge()
       if result != 0:
         break
       if player1 == GomokuPlayer.SimpleAI and player2 == GomokuPlayer.SimpleAI:
@@ -152,21 +167,15 @@ class GomokuServer(object):
       if input_func is None:
         return self.input_by_key()
       else:
-        return input_func
+        return input_func()
     elif player == GomokuPlayer.SimpleAI:
       print("Turn to SimpleAI using %s..."%next_player)
-      return self.__gomoku_api.ai_api_get_best_set()
+      x, y = self.__gomoku_api.ai_api_get_best_set()
+      return self.__gomoku_base.coor_to_num(x, y)
     elif player == GomokuPlayer.AI:
       print("This AI is under building...")
       return 0
 
 if __name__ == '__main__':
-  # aaa = Gomoku(width = 8, height = 8)
-  aaa = GomokuBase()
-  aaa.init_board()
-  bbb = GomokuServer(aaa)
-  bbb.start_play(GomokuPlayer.Human, GomokuPlayer.SimpleAI, bbb.graphic)
-# class GomokuJudge(Object):
-
-
-# class GomokuPainter(Object):
+  bbb = GomokuServer()
+  bbb.start_play(GomokuPlayer.SimpleAI, GomokuPlayer.Human, bbb.graphic)
