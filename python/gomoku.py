@@ -78,15 +78,10 @@ class GomokuBase(object):
         chess_point = self.__board[::2]
 
       l_point = x_last
-      print("l_point = " + str(l_point))
       r_point = self.width - x_last - 1
-      print("r_point = " + str(r_point))
       u_point = y_last
-      print("u_point = " + str(u_point))
       d_point = self.width - x_last - 1
-      print("d_point = " + str(d_point))
 
-      # -
       l_count = 0
       r_count = 0
       u_count = 0
@@ -96,8 +91,6 @@ class GomokuBase(object):
       ld_count = 0
       rd_count = 0
 
-      print('=' * 10)
-      print("now_point = (%d, %d)"%(x_last, y_last))
       for i in range(1, min(l_point, self.n_to_win - 1) + 1):
         num_find = num_last - i
         x_find, y_find = self.num_to_coor(num_find)
@@ -105,10 +98,7 @@ class GomokuBase(object):
           l_count += 1
         else:
           break
-        print("find_point = (%d, %d)"%(x_find, y_find))
 
-      print('=' * 10)
-      print("now_point = (%d, %d)"%(x_last, y_last))
       for i in range(1, min(r_point, self.n_to_win - 1) + 1):
         num_find = num_last + i
         x_find, y_find = self.num_to_coor(num_find)
@@ -116,10 +106,7 @@ class GomokuBase(object):
           r_count += 1
         else:
           break
-        print("find_point = (%d, %d)"%(x_find, y_find))
 
-      print('=' * 10)
-      print("now_point = (%d, %d)"%(x_last, y_last))
       for i in range(1, min(u_point, self.n_to_win - 1) + 1):
         num_find = num_last - i * self.width
         x_find, y_find = self.num_to_coor(num_find)
@@ -127,10 +114,7 @@ class GomokuBase(object):
           u_count += 1
         else:
           break
-        print("find_point = (%d, %d)"%(x_find, y_find))
 
-      print('=' * 10)
-      print("now_point = (%d, %d)"%(x_last, y_last))
       for i in range(1, min(d_point, self.n_to_win - 1) + 1):
         num_find = num_last + i * self.width
         x_find, y_find = self.num_to_coor(num_find)
@@ -138,10 +122,7 @@ class GomokuBase(object):
           d_count += 1
         else:
           break
-        print("find_point = (%d, %d)"%(x_find, y_find))
 
-      print('=' * 10)
-      print("now_point = (%d, %d)"%(x_last, y_last))
       for i in range(1, min(u_point, l_point, self.n_to_win - 1) + 1):
         num_find = num_last - i - i * self.width
         x_find, y_find = self.num_to_coor(num_find)
@@ -149,10 +130,7 @@ class GomokuBase(object):
           lu_count += 1
         else:
           break
-        print("find_point = (%d, %d)"%(x_find, y_find))
 
-      print('=' * 10)
-      print("now_point = (%d, %d)"%(x_last, y_last))
       for i in range(1, min(u_point, r_point, self.n_to_win - 1) + 1):
         num_find = num_last + i - i * self.width
         x_find, y_find = self.num_to_coor(num_find)
@@ -160,10 +138,7 @@ class GomokuBase(object):
           ru_count += 1
         else:
           break
-        print("find_point = (%d, %d)"%(x_find, y_find))
 
-      print('=' * 10)
-      print("now_point = (%d, %d)"%(x_last, y_last))
       for i in range(1, min(d_point, l_point, self.n_to_win - 1) + 1):
         num_find = num_last - i + i * self.width
         x_find, y_find = self.num_to_coor(num_find)
@@ -171,10 +146,7 @@ class GomokuBase(object):
           ld_count += 1
         else:
           break
-        print("find_point = (%d, %d)"%(x_find, y_find))
 
-      print('=' * 10)
-      print("now_point = (%d, %d)"%(x_last, y_last))
       for i in range(1, min(d_point, r_point, self.n_to_win - 1) + 1):
         num_find = num_last + i + i * self.width
         x_find, y_find = self.num_to_coor(num_find)
@@ -182,17 +154,19 @@ class GomokuBase(object):
           rd_count += 1
         else:
           break
-        print("find_point = (%d, %d)"%(x_find, y_find))
 
       # -
       count = 1 + max((l_count + r_count), (u_count + d_count), (lu_count + rd_count), (ld_count + ru_count))
       print(count)
       if count >= self.n_to_win:
         if next_player == BoardState.Black.value:
+          print("White player is winner!")
           return 2
         else:
+          print("Black player is winner!")
           return 1
       elif len(self.__available) == 0:
+        print("No winner!")
         return 3
       else:
         return 0
