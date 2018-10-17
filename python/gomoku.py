@@ -262,6 +262,11 @@ class GomokuServer(object):
     else:
       self.__gomoku_base = gomoku_base
 
+    self.player1_fn = None
+    self.player1_args = None
+    self.player2_fn = None
+    self.player2_args = None
+
   def graphic(self):
     width = self.__gomoku_base.width
     height = self.__gomoku_base.height
@@ -296,25 +301,53 @@ class GomokuServer(object):
 
     return self.__gomoku_base.coor_to_num(x, y)
 
-  def start_play(self, player1 = GomokuPlayer.Human, player2 = GomokuPlayer.Human, output_func = None):
+  # def start_play(self, player1 = GomokuPlayer.Human, player2 = GomokuPlayer.Human, output_func = None):
+  #   self.__gomoku_base.init_board()
+  #   output_func()
+  #   while True:
+  #     next_player = self.__gomoku_base.get_next_player()
+  #     if next_player == 1:
+  #       next_player = 'Black'
+  #       num = self.one_set(player1, next_player)
+  #     else:
+  #       next_player = 'White'
+  #       num = self.one_set(player2, next_player)
+
+  #     self.__gomoku_base.do_chess(num)
+  #     output_func()
+  #     result = self.__gomoku_base.do_judge()
+  #     if result != 0:
+  #       break
+  #     if player1 == GomokuPlayer.SimpleAI and player2 == GomokuPlayer.SimpleAI:
+  #       time.sleep(0.2)
+
+  def start_play(self, output_fn = None):
     self.__gomoku_base.init_board()
-    output_func()
+    if output_fn is not None:
+      output_fn()
     while True:
       next_player = self.__gomoku_base.get_next_player()
       if next_player == 1:
-        next_player = 'Black'
-        num = self.one_set(player1, next_player)
+        print('Turn to Black:')
+        if self.player1_fn is None:
+          num = self.input_by_key()
+        else:
+          num = self.player1_fn(**self.player1_args)
       else:
-        next_player = 'White'
-        num = self.one_set(player2, next_player)
+        print('Turn to White:')
+        if self.player2_fn is None:
+          num = self.input_by_key()
+        else:
+          num = self.player2_fn(**self.player2_args)
 
       self.__gomoku_base.do_chess(num)
-      output_func()
+      if output_fn is not None:
+        output_fn()
       result = self.__gomoku_base.do_judge()
       if result != 0:
         break
-      if player1 == GomokuPlayer.SimpleAI and player2 == GomokuPlayer.SimpleAI:
-        time.sleep(0.2)
+      # if player1 == GomokuPlayer.SimpleAI and player2 == GomokuPlayer.SimpleAI:
+        # time.sleep(0.2)
 
 
   def one_set(self, player, next_player, input_func = None):
@@ -369,4 +402,4 @@ class GomokuServer(object):
 
 if __name__ == '__main__':
   bbb = GomokuServer()
-  bbb.start_play(GomokuPlayer.Human, GomokuPlayer.Human, bbb.graphic)
+  bbb.start_play(output_fn = bbb.graphic)
