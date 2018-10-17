@@ -15,7 +15,7 @@ class GomokuBase(object):
     self.height = int(kwargs.get('height', 15))
     self.n_to_win = int(kwargs.get('n_to_win', 5))
     if self.width == 15 and self.height == 15 and self.n_to_win == 5:
-      self.use_forbidden = bool(kwargs.get('n_to_win', True))
+      self.use_forbidden = bool(kwargs.get('use_forbidden', True))
     else:
       self.use_forbidden = False
 

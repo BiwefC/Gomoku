@@ -17,12 +17,12 @@ from CNN_policy import PolicyValueNet  # Theano and Lasagne
 class TrainPipeline():
     def __init__(self, init_model=None):
         # params of the board and the game
-        self.board_width = 6
-        self.board_height = 6
-        self.n_in_row = 4
+        self.board_width = 8
+        self.board_height = 8
+        self.n_to_win = 5
         self.board = GomokuBase(width=self.board_width,
                            height=self.board_height,
-                           n_to_win=self.n_in_row)
+                           n_to_win=self.n_to_win)
         self.game = GomokuServer(self.board)
         # training params
         self.learn_rate = 2e-3
@@ -172,6 +172,7 @@ class TrainPipeline():
                 if (i+1) % self.check_freq == 0:
                     print("current self-play batch: {}".format(i+1))
                     # win_ratio = self.policy_evaluate()
+                    np.save("data_buffer.npy", self.data_buffer)
                     self.policy_value_net.save_model('./current_policy.model')
                     # if win_ratio > self.best_win_ratio:
                     #     print("New best policy!!!!!!!!")
