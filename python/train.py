@@ -188,5 +188,10 @@ class TrainPipeline():
 
 
 if __name__ == '__main__':
-    training_pipeline = TrainPipeline()
+    input_str = input('Do u want to load last data?(y/n or Y/N)')
+    if input_str in ['y', 'Y']:
+        training_pipeline = TrainPipeline("current_policy.model")
+        training_pipeline.data_buffer = deque(np.load("data_buffer.npy"))
+    else:
+        training_pipeline = TrainPipeline()
     training_pipeline.run()

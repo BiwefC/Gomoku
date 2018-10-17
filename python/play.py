@@ -17,9 +17,9 @@ from CNN_policy import PolicyValueNet  # Theano and Lasagne
 class PlayGomoku():
   def __init__(self, init_model=None):
     # params of the board and the game
-    self.board_width = 6
-    self.board_height = 6
-    self.n_to_win = 4
+    self.board_width = 8
+    self.board_height = 8
+    self.n_to_win = 5
     self.board = GomokuBase(width=self.board_width,
                        height=self.board_height,
                        n_to_win=self.n_to_win)
