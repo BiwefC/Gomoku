@@ -185,17 +185,7 @@ class GomokuBase(object):
         else:
           break
 
-      # -
       count = 1 + max((l_count + r_count), (u_count + d_count), (lu_count + rd_count), (ld_count + ru_count))
-      # print(l_count)
-      # print(r_count)
-      # print(u_count)
-      # print(d_count)
-      # print(lu_count)
-      # print(ld_count)
-      # print(ru_count)
-      # print(rd_count)
-      # print(count)
       if count >= self.n_to_win:
         if next_player == BoardState.Black.value:
           # print("White player is winner!")
@@ -301,26 +291,6 @@ class GomokuServer(object):
 
     return self.__gomoku_base.coor_to_num(x, y)
 
-  # def start_play(self, player1 = GomokuPlayer.Human, player2 = GomokuPlayer.Human, output_func = None):
-  #   self.__gomoku_base.init_board()
-  #   output_func()
-  #   while True:
-  #     next_player = self.__gomoku_base.get_next_player()
-  #     if next_player == 1:
-  #       next_player = 'Black'
-  #       num = self.one_set(player1, next_player)
-  #     else:
-  #       next_player = 'White'
-  #       num = self.one_set(player2, next_player)
-
-  #     self.__gomoku_base.do_chess(num)
-  #     output_func()
-  #     result = self.__gomoku_base.do_judge()
-  #     if result != 0:
-  #       break
-  #     if player1 == GomokuPlayer.SimpleAI and player2 == GomokuPlayer.SimpleAI:
-  #       time.sleep(0.2)
-
   def start_play(self, output_fn = None):
     self.__gomoku_base.init_board()
     if output_fn is not None:
@@ -340,15 +310,21 @@ class GomokuServer(object):
         else:
           num = self.player2_fn(**self.player2_args)
 
+      x, y = self.__gomoku_base.num_to_coor(num)
+      print("Last step is (%d, %d)"%(x, y))
       self.__gomoku_base.do_chess(num)
       if output_fn is not None:
         output_fn()
       result = self.__gomoku_base.do_judge()
-      if result != 0:
+      if result == 1:
+        print('Black Win!')
         break
-      # if player1 == GomokuPlayer.SimpleAI and player2 == GomokuPlayer.SimpleAI:
-        # time.sleep(0.2)
-
+      elif result == 2:
+        print('White Win!')
+        break
+      elif result == 3:
+        print('Tie')
+        break
 
   def one_set(self, player, next_player, input_func = None):
     if player == GomokuPlayer.Human:

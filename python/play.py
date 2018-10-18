@@ -28,7 +28,7 @@ class PlayGomoku():
     self.learn_rate = 2e-3
     self.lr_multiplier = 1.0  # adaptively adjust the learning rate based on KL
     self.temp = 1.0  # the temperature param
-    self.n_playout = 400  # num of simulations for each move
+    self.n_playout = 4000  # num of simulations for each move
     self.c_puct = 5
     self.buffer_size = 10000
     self.batch_size = 512  # mini-batch size for training
@@ -61,8 +61,8 @@ class PlayGomoku():
 
 if __name__ == '__main__':
   play = PlayGomoku("current_policy.model")
-  play.game.player1_fn = play.mcts_player.get_action
-  play.game.player1_args = {"board": play.board, "temp": 1e-3, "return_prob": 0}
+  # play.game.player1_fn = play.mcts_player.get_action
+  # play.game.player1_args = {"board": play.board, "temp": 1e-3, "return_prob": 0}
   play.game.player2_fn = play.mcts_player.get_action
   play.game.player2_args = {"board": play.board, "temp": 1e-3, "return_prob": 0}
   play.game.start_play(output_fn = play.game.graphic)

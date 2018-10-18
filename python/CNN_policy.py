@@ -136,3 +136,4 @@ class PolicyValueNet():
 
     def restore_model(self, model_path):
         self.saver.restore(self.session, model_path)
+        print("Load model sucess!")
