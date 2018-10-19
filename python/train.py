@@ -1,60 +1,41 @@
-
-
 from __future__ import print_function
 import random
 import numpy as np
 from collections import defaultdict, deque
-# from game import Board, Game
 from gomoku import GomokuServer, GomokuBase
-# from mcts_pure import MCTSPlayer as MCTS_Pure
 from mcts import MCTSPlayer
-from CNN_policy import PolicyValueNet  # Theano and Lasagne
-# from policy_value_net_pytorch import PolicyValueNet  # Pytorch
-# from policy_value_net_tensorflow import PolicyValueNet # Tensorflow
-# from policy_value_net_keras import PolicyValueNet # Keras
+from CNN_policy import PolicyValueNet
 
+from config import GomokuConfig
 
 class TrainPipeline():
-    def __init__(self, init_model=None):
+    def __init__(self, init_model = True):
+        self.config = GomokuConfig()
         # params of the board and the game
-        self.board_width = 8
-        self.board_height = 8
-        self.n_to_win = 5
-        self.board = GomokuBase(width=self.board_width,
-                           height=self.board_height,
-                           n_to_win=self.n_to_win)
+        self.board = GomokuBase(width = self.config.board_width,
+                           height = self.config.board_height,
+                           n_to_win = self.config.n_to_win,
+                           use_forbidden = self.config.use_forbidden)
         self.game = GomokuServer(self.board)
         # training params
-        self.learn_rate = 2e-3
-        self.lr_multiplier = 1.0  # adaptively adjust the learning rate based on KL
-        self.temp = 1.0  # the temperature param
-        self.n_playout = 400  # num of simulations for each move
-        self.c_puct = 5
-        self.buffer_size = 10000
-        self.batch_size = 512  # mini-batch size for training
-        self.data_buffer = deque(maxlen=self.buffer_size)
-        self.play_batch_size = 1
-        self.epochs = 5  # num of train_steps for each update
-        self.kl_targ = 0.02
-        self.check_freq = 50
-        self.game_batch_num = 1500
+        self.data_buffer = deque(maxlen=self.config.buffer_size)
         self.best_win_ratio = 0.0
         # num of simulations used for the pure mcts, which is used as
         # the opponent to evaluate the trained policy
-        self.pure_mcts_playout_num = 1000
+        #self.pure_mcts_playout_num = 1000
         if init_model:
             # start training from an initial policy-value net
-            self.policy_value_net = PolicyValueNet(self.board_width,
-                                                   self.board_height,
-                                                   model_file=init_model)
+            self.policy_value_net = PolicyValueNet(self.config.board_width,
+                                                   self.config.board_height,
+                                                   model_file = self.config.model_path)
         else:
             # start training from a new policy-value net
-            self.policy_value_net = PolicyValueNet(self.board_width,
-                                                   self.board_height)
+            self.policy_value_net = PolicyValueNet(self.config.board_width,
+                                                   self.config.board_height)
         self.mcts_player = MCTSPlayer(self.policy_value_net.policy_value_fn,
-                                      c_puct=self.c_puct,
-                                      n_playout=self.n_playout,
-                                      is_selfplay=1)
+                                      c_puct = self.config.c_puct,
+                                      n_playout = self.config.n_playout,
+                                      is_selfplay = 1)
 
     def get_equi_data(self, play_data):
         """augment the data set by rotation and flipping
@@ -66,7 +47,7 @@ class TrainPipeline():
                 # rotate counterclockwise
                 equi_state = np.array([np.rot90(s, i) for s in state])
                 equi_mcts_prob = np.rot90(np.flipud(
-                    mcts_porb.reshape(self.board_height, self.board_width)), i)
+                    mcts_porb.reshape(self.config.board_height, self.config.board_width)), i)
                 extend_data.append((equi_state,
                                     np.flipud(equi_mcts_prob).flatten(),
                                     winner))
@@ -82,38 +63,38 @@ class TrainPipeline():
         """collect self-play data for training"""
         for i in range(n_games):
             winner, play_data = self.game.start_self_play(self.mcts_player,
-                                                          temp=self.temp)
+                                                          temp = self.config.temp,
+                                                          dirichlet_v = self.config.dirichlet)
             play_data = list(play_data)[:]
-            self.episode_len = len(play_data)
             # augment the data
             play_data = self.get_equi_data(play_data)
             self.data_buffer.extend(play_data)
 
     def policy_update(self):
         """update the policy-value net"""
-        mini_batch = random.sample(self.data_buffer, self.batch_size)
+        mini_batch = random.sample(self.data_buffer, self.config.batch_size)
         state_batch = [data[0] for data in mini_batch]
         mcts_probs_batch = [data[1] for data in mini_batch]
         winner_batch = [data[2] for data in mini_batch]
         old_probs, old_v = self.policy_value_net.policy_value(state_batch)
-        for i in range(self.epochs):
+        for i in range(self.config.epochs):
             loss, entropy = self.policy_value_net.train_step(
                     state_batch,
                     mcts_probs_batch,
                     winner_batch,
-                    self.learn_rate*self.lr_multiplier)
+                    self.config.learn_rate * self.config.lr_multiplier)
             new_probs, new_v = self.policy_value_net.policy_value(state_batch)
             kl = np.mean(np.sum(old_probs * (
                     np.log(old_probs + 1e-10) - np.log(new_probs + 1e-10)),
                     axis=1)
             )
-            if kl > self.kl_targ * 4:  # early stopping if D_KL diverges badly
+            if kl > self.config.kl_targ * 4:  # early stopping if D_KL diverges badly
                 break
         # adaptively adjust the learning rate
-        if kl > self.kl_targ * 2 and self.lr_multiplier > 0.1:
-            self.lr_multiplier /= 1.5
-        elif kl < self.kl_targ / 2 and self.lr_multiplier < 10:
-            self.lr_multiplier *= 1.5
+        if kl > self.config.kl_targ * 2 and self.config.lr_multiplier > 0.1:
+            self.config.lr_multiplier /= 1.5
+        elif kl < self.config.kl_targ / 2 and self.config.lr_multiplier < 10:
+            self.config.lr_multiplier *= 1.5
 
         explained_var_old = (1 -
                              np.var(np.array(winner_batch) - old_v.flatten()) /
@@ -128,7 +109,7 @@ class TrainPipeline():
                "explained_var_old:{:.3f},"
                "explained_var_new:{:.3f}"
                ).format(kl,
-                        self.lr_multiplier,
+                        self.config.lr_multiplier,
                         loss,
                         entropy,
                         explained_var_old,
@@ -161,15 +142,14 @@ class TrainPipeline():
     def run(self):
         """run the training pipeline"""
         try:
-            for i in range(self.game_batch_num):
-                self.collect_selfplay_data(self.play_batch_size)
-                print("batch i:{}, episode_len:{}".format(
-                        i+1, self.episode_len))
-                if len(self.data_buffer) > self.batch_size:
+            for i in range(self.config.game_batch_num):
+                self.collect_selfplay_data(self.config.play_batch_size)
+                print("batch i:{}".format(i+1))
+                if len(self.data_buffer) > self.config.batch_size:
                     loss, entropy = self.policy_update()
                 # check the performance of the current model,
                 # and save the model params
-                if (i+1) % self.check_freq == 0:
+                if (i+1) % self.config.check_freq == 0:
                     print("current self-play batch: {}".format(i+1))
                     # win_ratio = self.policy_evaluate()
                     np.save("data_buffer.npy", self.data_buffer)
@@ -190,8 +170,8 @@ class TrainPipeline():
 if __name__ == '__main__':
     input_str = input('Do u want to load last data?(y/n or Y/N)')
     if input_str in ['y', 'Y']:
-        training_pipeline = TrainPipeline("current_policy.model")
+        training_pipeline = TrainPipeline(True)
         training_pipeline.data_buffer = deque(np.load("data_buffer.npy"))
     else:
-        training_pipeline = TrainPipeline()
+        training_pipeline = TrainPipeline(False)
     training_pipeline.run()

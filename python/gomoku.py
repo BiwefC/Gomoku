@@ -1,7 +1,9 @@
 from enum import Enum
 import numpy as np
-import ctypes
 import time
+
+from gomoku_api import gomoku_api_inst
+
 
 class BoardState(Enum):
   Empty = 0
@@ -21,7 +23,6 @@ class GomokuBase(object):
 
     if self.use_forbidden:
       self.use_api = True
-      self.__api = kwargs.get('api', None)
     else:
       self.use_api = False
 
@@ -29,9 +30,6 @@ class GomokuBase(object):
     self.__board = []
     self.__available = list(range(self.width * self.height))
     self.__next_player_black = True
-    if self.use_api:
-      self.__api.table_api_table_reset()
-
 
   def get_board_readable(self):
     board = np.zeros((self.height, self.width))
@@ -44,6 +42,9 @@ class GomokuBase(object):
       board[y][x] = player
 
     return board
+
+  def get_chess_count(self):
+    return len(self.__board)
 
   def get_status(self):
     status = np.zeros((4, self.width, self.height))
@@ -100,7 +101,7 @@ class GomokuBase(object):
     next_player = self.get_next_player()
     if self.use_api:
       # COLOR IS OPT TO PLAYER
-      return self.__api.api_set_and_judge(x_last, y_last, next_player)
+      return gomoku_api_inst.api_do_judge(self.get_board_readable(), x_last, y_last, len(self.__board))
     else:
       if next_player == BoardState.Black.value:
         chess_point = self.__board[1::2]
@@ -211,32 +212,6 @@ class GomokuBase(object):
       return True, -1
 
 
-class GomokuAPI(object):
-  def __init__(self):
-    self.__so = ctypes.cdll.LoadLibrary
-    self.__lib = self.__so("../c/linux_proj/libgomoku_judge.so")
-
-  def table_api_table_reset(self):
-    self.__lib.TableAPITableReset()
-
-  def api_set_and_judge(self, x, y, color):
-    self.table_api_set(x, y, color)
-    return self.judge_api_do_judge(x, y, color)
-    # ATTENTION: THE PLAYER AND COLOR IS NOT EQUAL!
-
-  def table_api_set(self, x, y, color):
-    self.__lib.TableAPISet(x, y, color)
-
-  def judge_api_do_judge(self, x, y, color):
-    return self.__lib.JudgeAPIDoJudge(x, y, color)
-
-  def ai_api_get_best_set(self):
-    tmp = self.__lib.AIAPIGetBestSet()
-    x = tmp % 100
-    y = tmp // 100
-    return x, y
-
-
 class GomokuPlayer(Enum):
   NotDefine = 0
   Human = 1
@@ -247,8 +222,7 @@ class GomokuPlayer(Enum):
 class GomokuServer(object):
   def __init__(self, gomoku_base = None):
     if gomoku_base is None:
-      self.__gomoku_api = GomokuAPI()
-      self.__gomoku_base = GomokuBase(width = 6, height = 6, n_to_win = 4, api = self.__gomoku_api)
+      self.__gomoku_base = GomokuBase(width = 15, height = 15, n_to_win = 5)
     else:
       self.__gomoku_base = gomoku_base
 
@@ -335,13 +309,13 @@ class GomokuServer(object):
         return input_func()
     elif player == GomokuPlayer.SimpleAI:
       print("Turn to SimpleAI using %s..."%next_player)
-      x, y = self.__gomoku_api.ai_api_get_best_set()
+      x, y = gomoku_api_inst.api_get_best_set(self.__gomoku_base.get_board_readable(), self.__gomoku_base.get_chess_count())
       return self.__gomoku_base.coor_to_num(x, y)
     elif player == GomokuPlayer.AI:
       print("This AI is under building...")
       return 0
 
-  def start_self_play(self, player, is_shown=1, temp=1e-3):
+  def start_self_play(self, player, is_shown = 1, temp = 1e-3, dirichlet_v = 0.25):
     """ start a self-play game using a MCTS player, reuse the search tree,
     and store the self-play data: (state, mcts_probs, z) for training
     """
@@ -349,8 +323,9 @@ class GomokuServer(object):
     states, mcts_probs, current_players = [], [], []
     while True:
       move, move_probs = player.get_action(self.__gomoku_base,
-                                           temp=temp,
-                                           return_prob=1)
+                                           temp = temp,
+                                           return_prob = 1,
+                                           dirichlet_v = dirichlet_v)
       # store the data
       states.append(self.__gomoku_base.get_status())
       mcts_probs.append(move_probs)
@@ -378,4 +353,8 @@ class GomokuServer(object):
 
 if __name__ == '__main__':
   bbb = GomokuServer()
+  # bbb.player1_fn = bbb.one_set
+  # bbb.player2_fn = bbb.one_set
+  # bbb.player1_args = {'player': GomokuPlayer.SimpleAI, 'next_player': 'Black'}
+  # bbb.player2_args = {'player': GomokuPlayer.SimpleAI, 'next_player': 'White'}
   bbb.start_play(output_fn = bbb.graphic)

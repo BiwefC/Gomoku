@@ -175,7 +175,7 @@ class MCTSPlayer(object):
     def reset_player(self):
         self.mcts.update_with_move(-1)
 
-    def get_action(self, board, temp=1e-3, return_prob=0):
+    def get_action(self, board, temp=1e-3, return_prob=0, dirichlet_v = 0.25):
         sensible_moves = board.get_available()
         # the pi vector returned by MCTS as in the alphaGo Zero paper
         move_probs = np.zeros(board.width*board.height)
@@ -188,7 +188,7 @@ class MCTSPlayer(object):
                 move = np.random.choice(
                     acts,
                     # p=0.75*probs + 0.25*np.random.dirichlet(0.3*np.ones(len(probs)))
-                    p=0.9*probs + 0.1*np.random.dirichlet(0.3*np.ones(len(probs)))
+                    p=(1 - dirichlet_v)*probs + dirichlet_v*np.random.dirichlet(0.3*np.ones(len(probs)))
                 )
                 # update the root node and reuse the search tree
                 self.mcts.update_with_move(move)
