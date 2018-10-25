@@ -12,6 +12,7 @@ class GomokuConfig(object):
 		self.lr_multiplier = 1.0
 		self.temp = 1.0
 		self.n_playout = 400
+		self.n_playout_play = 40000
 		self.c_puct = 5
 		self.buffer_size = 10000
 		self.batch_size = 512
@@ -19,7 +20,7 @@ class GomokuConfig(object):
 		self.epochs = 5
 		self.kl_targ = 0.02
 		self.check_freq = 50
-		self.game_batch_num = 1500
-		self.model_dir = './model_8x8_5/'
+		self.game_batch_num = 15000
+		self.model_dir = './'
 		self.model_name = 'current_policy.model'
 		self.model_path = self.model_dir + self.model_name

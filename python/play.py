@@ -25,7 +25,7 @@ class PlayGomoku():
                                              model_file = self.config.model_path)
     self.mcts_player = MCTSPlayer(self.policy_value_net.policy_value_fn,
                                   c_puct = self.config.c_puct,
-                                  n_playout = self.config.n_playout,
+                                  n_playout = self.config.n_playout_play,
                                   is_selfplay = 0)
 
   def play():
@@ -33,8 +33,8 @@ class PlayGomoku():
 
 if __name__ == '__main__':
   play = PlayGomoku()
-  # play.game.player1_fn = play.mcts_player.get_action
-  # play.game.player1_args = {"board": play.board, "return_prob": 0}
+  play.game.player1_fn = play.mcts_player.get_action
+  play.game.player1_args = {"board": play.board, "return_prob": 0}
   # play.game.player2_fn = play.mcts_player.get_action
   # play.game.player2_args = {"board": play.board, "return_prob": 0}
   play.game.start_play(output_fn = play.game.graphic)

@@ -5,6 +5,7 @@ from collections import defaultdict, deque
 from gomoku import GomokuServer, GomokuBase
 from mcts import MCTSPlayer
 from CNN_policy import PolicyValueNet
+import time
 
 from config import GomokuConfig
 
@@ -114,6 +115,19 @@ class TrainPipeline():
                         entropy,
                         explained_var_old,
                         explained_var_new))
+        with open('train.log', 'a+') as f:
+            f.write(("kl:{:.5f},"
+               "lr_multiplier:{:.3f},"
+               "loss:{},"
+               "entropy:{},"
+               "explained_var_old:{:.3f},"
+               "explained_var_new:{:.3f}\n"
+               ).format(kl,
+                        self.config.lr_multiplier,
+                        loss,
+                        entropy,
+                        explained_var_old,
+                        explained_var_new))
         return loss, entropy
 
     # def policy_evaluate(self, n_games=10):
@@ -145,6 +159,8 @@ class TrainPipeline():
             for i in range(self.config.game_batch_num):
                 self.collect_selfplay_data(self.config.play_batch_size)
                 print("batch i:{}".format(i+1))
+                with open('train.log', 'a+') as f:
+                    f.write("batch i:{}, ".format(i+1))
                 if len(self.data_buffer) > self.config.batch_size:
                     loss, entropy = self.policy_update()
                 # check the performance of the current model,
@@ -152,7 +168,14 @@ class TrainPipeline():
                 if (i+1) % self.config.check_freq == 0:
                     print("current self-play batch: {}".format(i+1))
                     # win_ratio = self.policy_evaluate()
-                    np.save("data_buffer.npy", self.data_buffer)
+                    while(True):
+                        try:
+                            np.save("data_buffer.npy", self.data_buffer)
+                        except:
+                            print('save numpy error')
+                            time.sleep(1)
+                        else:
+                            break
                     self.policy_value_net.save_model('./current_policy.model')
                     # if win_ratio > self.best_win_ratio:
                     #     print("New best policy!!!!!!!!")
@@ -171,7 +194,7 @@ if __name__ == '__main__':
     input_str = input('Do u want to load last data?(y/n or Y/N)')
     if input_str in ['y', 'Y']:
         training_pipeline = TrainPipeline(True)
-        training_pipeline.data_buffer = deque(np.load("data_buffer.npy"))
+        #training_pipeline.data_buffer = deque(np.load("data_buffer.npy"))
     else:
         training_pipeline = TrainPipeline(False)
     training_pipeline.run()
