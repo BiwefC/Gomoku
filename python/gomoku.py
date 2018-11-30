@@ -220,12 +220,14 @@ class GomokuPlayer(Enum):
 
 
 class GomokuServer(object):
-  def __init__(self, gomoku_base = None):
+  def __init__(self, gomoku_base = None, player1 = None, player2 = None):
     if gomoku_base is None:
       self.__gomoku_base = GomokuBase(width = 15, height = 15, n_to_win = 5)
     else:
       self.__gomoku_base = gomoku_base
 
+    self.player1 = player1
+    self.player2 = player2
     self.player1_fn = None
     self.player1_args = None
     self.player2_fn = None
@@ -267,22 +269,39 @@ class GomokuServer(object):
 
   def start_play(self, output_fn = None):
     self.__gomoku_base.init_board()
+    self.__gomoku_base.do_chess(7 * 15 + 7)
     if output_fn is not None:
       output_fn()
     while True:
       next_player = self.__gomoku_base.get_next_player()
       if next_player == 1:
         print('Turn to Black:')
-        if self.player1_fn is None:
+        print(self.player1)
+        if self.player1 == GomokuPlayer.Human:
           num = self.input_by_key()
-        else:
+        elif self.player1 == GomokuPlayer.SimpleAI:
+          x, y = gomoku_api_inst.api_get_best_set(self.__gomoku_base.get_board_readable(), self.__gomoku_base.get_chess_count())
+          num = self.__gomoku_base.coor_to_num(x, y)
+        elif self.player1 == GomokuPlayer.AI:
           num = self.player1_fn(**self.player1_args)
+        # if self.player1_fn is None:
+          # num = self.input_by_key()
+        # else:
+          # num = self.player1_fn(**self.player1_args)
       else:
         print('Turn to White:')
-        if self.player2_fn is None:
+        print(self.player2)
+        if self.player2 == GomokuPlayer.Human:
           num = self.input_by_key()
-        else:
+        elif self.player2 == GomokuPlayer.SimpleAI:
+          x, y = gomoku_api_inst.api_get_best_set(self.__gomoku_base.get_board_readable(), self.__gomoku_base.get_chess_count())
+          num = self.__gomoku_base.coor_to_num(x, y)
+        elif self.player2 == GomokuPlayer.AI:
           num = self.player2_fn(**self.player2_args)
+        # if self.player2_fn is None:
+          # num = self.input_by_key()
+        # else:
+          # num = self.player2_fn(**self.player2_args)
 
       x, y = self.__gomoku_base.num_to_coor(num)
       print("Last step is (%d, %d)"%(x, y))
@@ -320,7 +339,10 @@ class GomokuServer(object):
     and store the self-play data: (state, mcts_probs, z) for training
     """
     self.__gomoku_base.init_board()
+    self.__gomoku_base.do_chess(7 * 15 + 7)
     states, mcts_probs, current_players = [], [], []
+    if is_shown:
+      self.graphic()
     while True:
       move, move_probs = player.get_action(self.__gomoku_base,
                                            temp = temp,

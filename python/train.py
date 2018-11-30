@@ -36,7 +36,7 @@ class TrainPipeline():
         self.mcts_player = MCTSPlayer(self.policy_value_net.policy_value_fn,
                                       c_puct = self.config.c_puct,
                                       n_playout = self.config.n_playout,
-                                      is_selfplay = 1)
+                                      is_selfplay = True)
 
     def get_equi_data(self, play_data):
         """augment the data set by rotation and flipping
@@ -194,7 +194,7 @@ if __name__ == '__main__':
     input_str = input('Do u want to load last data?(y/n or Y/N)')
     if input_str in ['y', 'Y']:
         training_pipeline = TrainPipeline(True)
-        #training_pipeline.data_buffer = deque(np.load("data_buffer.npy"))
+        training_pipeline.data_buffer = deque(np.load("data_buffer.npy"))
     else:
         training_pipeline = TrainPipeline(False)
     training_pipeline.run()
